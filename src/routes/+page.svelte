@@ -123,6 +123,16 @@
 		for (const i of checked) items.delete(i.id);
 		await fetch('/api/list/clear-checked', { method: 'POST' });
 	}
+
+	async function addSuggestion(productId: number) {
+		await add({ productId, text: '' });
+		await invalidateAll();
+	}
+
+	async function dismiss(productId: number) {
+		await fetch(`/api/suggestions/${productId}/dismiss`, { method: 'POST' });
+		await invalidateAll();
+	}
 </script>
 
 <main>
@@ -130,6 +140,22 @@
 	{#if offline}<p class="notice">{t('common.offline')}</p>{/if}
 
 	<ProductInput placeholder={t('list.addPlaceholder')} onpick={add} />
+
+	{#if data.suggestions.length}
+		<h2>{t('list.suggestions')}</h2>
+		<div class="strip">
+			{#each data.suggestions as s (s.productId)}
+				<span class="chip">
+					<button class="ghost add" onclick={() => addSuggestion(s.productId)}>+ {s.name}</button>
+					<button
+						class="ghost x"
+						aria-label={t('list.dismiss')}
+						onclick={() => dismiss(s.productId)}>×</button
+					>
+				</span>
+			{/each}
+		</div>
+	{/if}
 
 	{#if !items.size}
 		<p class="muted" style="margin-top:1.5rem">{t('list.empty')}</p>
@@ -172,6 +198,24 @@
 {/snippet}
 
 <style>
+	.strip {
+		display: flex;
+		gap: 0.4rem;
+		overflow-x: auto;
+		padding-bottom: 0.25rem;
+	}
+	.strip .chip {
+		padding: 0;
+		flex: none;
+	}
+	.strip button {
+		min-height: 36px;
+		padding: 0.2rem 0.6rem;
+	}
+	.strip .x {
+		padding-left: 0.2rem;
+		color: var(--muted);
+	}
 	li input[type='checkbox'] {
 		width: 24px;
 		height: 24px;
