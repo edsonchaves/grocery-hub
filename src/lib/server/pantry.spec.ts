@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createProduct } from './catalog';
 import { listView } from './list';
 import { getStatus, pantryView, setStatus } from './pantry';
+import { savePurchase } from './receipts/service';
 import { testHousehold } from './test/db';
 
 describe('pantry', () => {
@@ -19,6 +20,22 @@ describe('pantry', () => {
 		setStatus(db, hh, admin.id, p.id, 'out');
 		setStatus(db, hh, admin.id, p.id, 'out');
 		expect(listView(db, hh)).toMatchObject([{ productId: p.id }]);
+	});
+
+	it('imported receipt restocks with purchase date', async () => {
+		const { db, admin, hh } = await testHousehold();
+		const kaffee = createProduct(db, hh, { name: 'Kaffee' });
+		setStatus(db, hh, admin.id, kaffee.id, 'out');
+		savePurchase(db, hh, admin.id, {
+			store: 'REWE',
+			purchasedAt: '2026-10-02T17:00',
+			totalCents: 699,
+			lines: [{ rawName: 'KAFFEE', productId: kaffee.id, lineCents: 699 }]
+		});
+		expect(getStatus(db, kaffee.id)).toMatchObject({
+			status: 'in_stock',
+			lastRestockAt: new Date('2026-10-02T17:00')
+		});
 	});
 
 	it('filters by status', async () => {
