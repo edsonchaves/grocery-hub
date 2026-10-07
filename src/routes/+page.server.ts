@@ -1,6 +1,7 @@
 import { getDb } from '#lib/server/db/index.ts';
 import { listView, sortList } from '#lib/server/list.ts';
 import { dueProducts } from '#lib/server/restock.ts';
+import { basketEstimate } from '#lib/server/insights.ts';
 import { requireUser } from '#lib/server/session.ts';
 import type { PageServerLoadEvent } from './$types';
 
@@ -9,6 +10,7 @@ export const load = ({ locals }: PageServerLoadEvent) => {
 	const db = getDb();
 	return {
 		items: sortList(listView(db, user.householdId)),
-		suggestions: dueProducts(db, user.householdId).slice(0, 8)
+		suggestions: dueProducts(db, user.householdId).slice(0, 8),
+		basket: basketEstimate(db, user.householdId)
 	};
 };

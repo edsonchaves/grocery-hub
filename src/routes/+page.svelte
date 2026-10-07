@@ -3,7 +3,7 @@
 	import { SvelteMap } from 'svelte/reactivity';
 	import { invalidateAll } from '$app/navigation';
 	import ProductInput from '#lib/components/ProductInput.svelte';
-	import { t } from '#lib/i18n.svelte.ts';
+	import { money, t } from '#lib/i18n.svelte.ts';
 	import type { ListItemView } from '#lib/types.ts';
 	import type { PageData } from './$types';
 
@@ -180,6 +180,22 @@
 				{@render row(i)}
 			{/each}
 		</ul>
+	{/if}
+
+	{#if data.basket.length && groups.length}
+		<details style="margin-top:1.5rem">
+			<summary class="muted">{t('list.basket')}</summary>
+			<ul class="rows" style="margin-top:0.5rem">
+				{#each data.basket as b (b.store)}
+					<li>
+						<span class="grow">{b.store}</span>
+						{#if b.missing}<span class="muted">{t('list.basketMissing', { n: b.missing })}</span
+							>{/if}
+						<span class="num">{money(b.totalCents)}</span>
+					</li>
+				{/each}
+			</ul>
+		</details>
 	{/if}
 </main>
 
