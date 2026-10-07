@@ -1,0 +1,13 @@
+# Local run of the production image. The real deployment lives in the nas-server stack.
+services:
+  grocery-hub:
+    build: .
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: ${TZ:-UTC}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-}

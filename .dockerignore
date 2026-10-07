@@ -1,0 +1,12 @@
+node_modules
+build
+.svelte-kit
+data
+test-results
+playwright-report
+.git
+.claude
+openspec
+*.log
+.env
+.env.*
