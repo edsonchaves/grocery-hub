@@ -10,7 +10,9 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// origin is checked in hooks.server.ts by host, so it works behind tailscale serve and on plain LAN http
+			csrf: { trustedOrigins: ['*'] }
 		})
 	],
 	test: {
