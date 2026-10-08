@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parseReweLines, pdfToLines, reweEbonParser, NotAReweEbon } from './rewe';
+import { parseReweOnlineLines, reweOnlineParser } from './rewe-online';
 import { toReviewLines, totalsMismatch } from './postprocess';
 import { createVisionParser, type VisionClient } from './vision';
 import { buildReview, processReceipt, savePurchase } from './service';
@@ -10,42 +11,13 @@ import { receipts } from '../db/schema';
 import { createProduct } from '../catalog';
 import { getStatus } from '../pantry';
 import { testHousehold } from '../test/db';
-import type { ParsedReceipt, ReceiptParser } from './types';
+import { textPdf } from '../test/pdf';
+import { UnrecognizedReceipt, type ParsedReceipt, type ReceiptParser } from './types';
 
-const fixture = fs
-	.readFileSync(path.join(import.meta.dirname, 'fixtures/rewe-ebon-synthetic.txt'), 'utf8')
-	.split('\n');
-
-/** Minimal PDF with each fixture line laid out like an eBon: name left, amount right-aligned. */
-function ebonPdf(lines: string[]) {
-	const esc = (s: string) => s.replace(/[\\()]/g, (c) => `\\${c}`);
-	const ops: string[] = [];
-	lines.forEach((line, i) => {
-		const y = 800 - i * 12;
-		const [left, ...right] = line.split(/\s{2,}/);
-		ops.push(`BT /F1 9 Tf 20 ${y} Td (${esc(left)}) Tj ET`);
-		if (right.length) ops.push(`BT /F1 9 Tf 200 ${y} Td (${esc(right.join(' '))}) Tj ET`);
-	});
-	const stream = ops.join('\n');
-	const objs = [
-		'<< /Type /Catalog /Pages 2 0 R >>',
-		'<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-		'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
-		`<< /Length ${Buffer.byteLength(stream, 'latin1')} >>\nstream\n${stream}\nendstream`,
-		'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>'
-	];
-	let pdf = '%PDF-1.4\n';
-	const offsets: number[] = [];
-	objs.forEach((o, i) => {
-		offsets.push(Buffer.byteLength(pdf, 'latin1'));
-		pdf += `${i + 1} 0 obj\n${o}\nendobj\n`;
-	});
-	const xref = Buffer.byteLength(pdf, 'latin1');
-	pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
-	pdf += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
-	pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-	return Buffer.from(pdf, 'latin1');
-}
+const readFixture = (name: string) =>
+	fs.readFileSync(path.join(import.meta.dirname, 'fixtures', name), 'utf8').split('\n');
+const fixture = readFixture('rewe-ebon-synthetic.txt');
+const online = readFixture('rewe-online-synthetic.txt');
 
 describe('REWE eBon parser', () => {
 	it('parses items, quantities, weights, Pfand, discounts, total and date', () => {
@@ -72,14 +44,71 @@ describe('REWE eBon parser', () => {
 	});
 
 	it('reads the eBon PDF without the LLM', async () => {
-		const lines = await pdfToLines(new Uint8Array(ebonPdf(fixture)));
+		const lines = await pdfToLines(new Uint8Array(textPdf(fixture)));
 		expect(parseReweLines(lines).totalCents).toBe(1208);
 
 		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gh-'));
 		const file = path.join(dir, 'receipt.pdf');
-		fs.writeFileSync(file, ebonPdf(fixture));
+		fs.writeFileSync(file, textPdf(fixture));
 		const { result } = await reweEbonParser.parse([{ path: file, mediaType: 'application/pdf' }]);
 		expect(result.lines).toHaveLength(8);
+	});
+});
+
+describe('REWE online invoice parser', () => {
+	it('parses rows, store, delivery date and total', () => {
+		const r = parseReweOnlineLines(online);
+		expect(r.store).toBe('REWE online');
+		expect(r.purchasedAt).toBe('2026-10-07T00:00');
+		expect(r.totalCents).toBe(2987);
+		expect(r.lines.map((l) => [l.name, l.kind, l.lineCents])).toEqual([
+			['ja! Basmati Reis 1kg', 'item', 747],
+			['REWE Beste Wahl Banane ca. 200g', 'item', 74],
+			['Weihenstephan H-Milch 3,5% 1l', 'item', 954],
+			['Pril Spülmittel Kraft Gel 450ml', 'item', 175],
+			['REWE Feine Welt Rumpsteak von der Färse', 'item', 1537],
+			['Pfandtasche*', 'pfand', 200],
+			['Pfandtasche Rückgabe*', 'pfand_return', -100],
+			['Summe Rabatt Gesamtpositionen**', 'order_discount', -600]
+		]);
+		expect(r.lines[0]).toMatchObject({ qty: 3, unit: 'pc' });
+	});
+
+	it('reads weighed items as kg', () => {
+		const r = parseReweOnlineLines(online);
+		expect(r.lines[1]).toMatchObject({ qty: 0.37, unit: 'kg', lineCents: 74 });
+		expect(r.lines[4]).toMatchObject({ qty: 0.308, unit: 'kg' });
+	});
+
+	it('reads a multi-page PDF so that only rows sum to the Gesamtsumme', async () => {
+		const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'gh-'));
+		const file = path.join(dir, 'receipt.pdf');
+		fs.writeFileSync(file, textPdf(online));
+		const { result } = await reweOnlineParser.parse([{ path: file, mediaType: 'application/pdf' }]);
+		expect(result.lines).toHaveLength(8);
+		expect(result.lines.reduce((s, l) => s + l.lineCents, 0)).toBe(result.totalCents);
+	});
+
+	it('keeps a non-zero delivery fee and drops a free one', () => {
+		expect(parseReweOnlineLines(online).lines.some((l) => l.kind === 'fee')).toBe(false);
+		const paid = parseReweOnlineLines(
+			online.map((l) =>
+				l.startsWith('Liefergebühr')
+					? 'Liefergebühr  1  A/B  3,90 €  3,90 €'
+					: l.startsWith('Gesamtsumme')
+						? 'Gesamtsumme  33,77 €'
+						: l
+			)
+		);
+		expect(paid.lines.find((l) => l.kind === 'fee')).toMatchObject({
+			name: 'Liefergebühr',
+			lineCents: 390
+		});
+	});
+
+	it('rejects other formats', () => {
+		expect(() => parseReweOnlineLines(fixture)).toThrow(UnrecognizedReceipt);
+		expect(() => parseReweLines(online)).toThrow(NotAReweEbon);
 	});
 });
 

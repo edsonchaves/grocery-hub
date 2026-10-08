@@ -4,7 +4,8 @@ import type { ParsedReceipt, RawLine, ReceiptFile, ReceiptParser } from './types
 
 export class NotAReweEbon extends Error {}
 
-const cents = (s: string) => Math.round(Number(s.replace(/\./g, '').replace(',', '.')) * 100);
+export const cents = (s: string) =>
+	Math.round(Number(s.replace(/\./g, '').replace(',', '.')) * 100);
 
 /** Rebuilds visual lines: eBon PDFs place name and price as separate text items on one row. */
 export async function pdfToLines(data: Uint8Array) {

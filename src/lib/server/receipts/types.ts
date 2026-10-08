@@ -37,6 +37,9 @@ export type ParsedReceipt = z.infer<typeof parsedReceiptSchema>;
 
 export type ReceiptFile = { path: string; mediaType: 'image/jpeg' | 'application/pdf' };
 
+/** The files are not in this parser's format; the next parser may try. */
+export class UnrecognizedReceipt extends Error {}
+
 export interface ReceiptParser {
 	parse(files: ReceiptFile[]): Promise<{ result: ParsedReceipt; raw: string }>;
 }
