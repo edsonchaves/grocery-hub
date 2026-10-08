@@ -431,7 +431,8 @@ export function missingForCurrentWeek(
 }
 
 export const dishNote = (dishNames: string[], store?: string | null) =>
-	`p/ ${dishNames.join(', ')}${store ? ` · ${store}` : ''}`;
+	[dishNames.length ? `p/ ${dishNames.join(', ')}` : '', store ?? ''].filter(Boolean).join(' · ') ||
+	undefined;
 
 export function addMissingToList(
 	db: Db,
