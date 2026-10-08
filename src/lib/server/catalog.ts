@@ -2,8 +2,10 @@ import { and, asc, eq, max, sql } from 'drizzle-orm';
 import type { Db } from './db';
 import {
 	categories,
+	dishIngredients,
 	listItems,
 	pantryStatus,
+	planEntries,
 	productAliases,
 	products,
 	purchaseLines,
@@ -239,6 +241,33 @@ export function mergeProducts(db: Db, householdId: number, sourceId: number, tar
 		tx.update(purchaseLines)
 			.set({ productId: targetId })
 			.where(eq(purchaseLines.productId, sourceId))
+			.run();
+
+		const targetDishes = new Set(
+			tx
+				.select({ dishId: dishIngredients.dishId })
+				.from(dishIngredients)
+				.where(eq(dishIngredients.productId, targetId))
+				.all()
+				.map((r) => r.dishId)
+		);
+		for (const i of tx
+			.select()
+			.from(dishIngredients)
+			.where(eq(dishIngredients.productId, sourceId))
+			.all()) {
+			if (targetDishes.has(i.dishId)) {
+				tx.delete(dishIngredients).where(eq(dishIngredients.id, i.id)).run();
+			} else {
+				tx.update(dishIngredients)
+					.set({ productId: targetId })
+					.where(eq(dishIngredients.id, i.id))
+					.run();
+			}
+		}
+		tx.update(planEntries)
+			.set({ productId: targetId })
+			.where(eq(planEntries.productId, sourceId))
 			.run();
 
 		const targetOpen = tx
