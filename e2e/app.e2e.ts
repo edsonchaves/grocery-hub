@@ -60,3 +60,35 @@ test('two members see list changes live', async ({ browser }) => {
 	await a.getByRole('checkbox', { name: 'Kaffee' }).check();
 	await expect(b.getByRole('checkbox', { name: 'Kaffee' })).toBeChecked({ timeout: 2000 });
 });
+
+test('plan a week and prepare shopping', async ({ browser }) => {
+	const page = await login(browser, 'Ana');
+	await page.goto('/week');
+	await page.getByRole('button', { name: 'Planejar semana' }).click();
+	await expect(page).toHaveURL(/\/week\/\d{4}-\d{2}-\d{2}$/);
+
+	await page.getByRole('button', { name: '+ Adicionar' }).nth(1).click();
+	await page.getByPlaceholder('Prato ou produto…').fill('Strogonoff');
+	await page.keyboard.press('Enter');
+	await expect(page).toHaveURL(/\/dishes\/\d+/);
+
+	await page.getByLabel('Qtd').last().fill('400');
+	await page.getByPlaceholder('Adicionar ingrediente…').fill('Frango');
+	await page.keyboard.press('Enter');
+	await expect(page.getByText('Frango')).toBeVisible();
+	await page.getByPlaceholder('Adicionar ingrediente…').fill('Creme de leite');
+	await page.keyboard.press('Enter');
+	await expect(page.getByText('Creme de leite')).toBeVisible();
+	await page.getByRole('link', { name: /Voltar/ }).click();
+
+	await expect(page.getByRole('link', { name: 'Strogonoff' })).toBeVisible();
+	await page.getByRole('link', { name: /Preparar compra/ }).click();
+	const ask = (name: string) => page.getByRole('listitem').filter({ hasText: name });
+	await ask('Frango').getByLabel('Não tem').check();
+	await ask('Creme de leite').getByLabel('Tem', { exact: true }).check();
+	await page.getByRole('button', { name: 'Adicionar à lista' }).click();
+
+	await expect(page).toHaveURL('/');
+	await expect(page.getByRole('checkbox', { name: /Frango/ })).toBeVisible();
+	await expect(page.getByRole('checkbox', { name: /Creme de leite/ })).toHaveCount(0);
+});
