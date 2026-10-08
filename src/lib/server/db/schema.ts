@@ -9,7 +9,7 @@ import {
 	uniqueIndex
 } from 'drizzle-orm/sqlite-core';
 import { LOCALES } from '../../i18n/locales';
-import { PANTRY_STATUSES } from '../../types';
+import { PANTRY_STATUSES, PLAN_ENTRY_KINDS, QTY_UNITS } from '../../types';
 
 const id = () => integer('id').primaryKey({ autoIncrement: true });
 const createdAt = () =>
@@ -199,4 +199,62 @@ export const suggestionDismissals = sqliteTable(
 		dismissedAt: integer('dismissed_at', { mode: 'timestamp_ms' }).notNull()
 	},
 	(t) => [primaryKey({ columns: [t.householdId, t.productId] })]
+);
+
+export const dishes = sqliteTable(
+	'dishes',
+	{
+		id: id(),
+		householdId: householdId(),
+		name: text('name').notNull(),
+		createdAt: createdAt()
+	},
+	(t) => [uniqueIndex('dishes_household_name').on(t.householdId, sql`lower(${t.name})`)]
+);
+
+export const dishIngredients = sqliteTable(
+	'dish_ingredients',
+	{
+		id: id(),
+		dishId: integer('dish_id')
+			.notNull()
+			.references(() => dishes.id, { onDelete: 'cascade' }),
+		productId: integer('product_id')
+			.notNull()
+			.references(() => products.id, { onDelete: 'cascade' }),
+		qty: real('qty'),
+		unit: text('unit', { enum: QTY_UNITS })
+	},
+	(t) => [uniqueIndex('dish_ingredients_dish_product').on(t.dishId, t.productId)]
+);
+
+export const planWeeks = sqliteTable(
+	'plan_weeks',
+	{
+		id: id(),
+		householdId: householdId(),
+		// local calendar date, YYYY-MM-DD
+		startDate: text('start_date').notNull(),
+		createdAt: createdAt()
+	},
+	(t) => [uniqueIndex('plan_weeks_household_start').on(t.householdId, t.startDate)]
+);
+
+export const planEntries = sqliteTable(
+	'plan_entries',
+	{
+		id: id(),
+		weekId: integer('week_id')
+			.notNull()
+			.references(() => planWeeks.id, { onDelete: 'cascade' }),
+		// null = whole-week block
+		date: text('date'),
+		kind: text('kind', { enum: PLAN_ENTRY_KINDS }).notNull(),
+		dishId: integer('dish_id').references(() => dishes.id, { onDelete: 'cascade' }),
+		productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
+		qty: real('qty'),
+		unit: text('unit', { enum: QTY_UNITS }),
+		position: integer('position').notNull().default(0)
+	},
+	(t) => [index('plan_entries_week').on(t.weekId)]
 );
