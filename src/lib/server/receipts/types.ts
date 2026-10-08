@@ -1,7 +1,15 @@
 import { z } from 'zod';
+import type { LINE_KINDS } from '../db/schema';
 
 export const UNITS = ['pc', 'kg', 'l'] as const;
-export const RAW_LINE_KINDS = ['item', 'discount', 'pfand', 'pfand_return'] as const;
+export const RAW_LINE_KINDS = [
+	'item',
+	'discount',
+	'order_discount',
+	'fee',
+	'pfand',
+	'pfand_return'
+] as const;
 
 export const rawLineSchema = z.object({
 	name: z.string(),
@@ -41,5 +49,5 @@ export type ReviewLine = {
 	unit: (typeof UNITS)[number] | null;
 	lineCents: number;
 	discountCents: number;
-	kind: 'item' | 'pfand';
+	kind: (typeof LINE_KINDS)[number];
 };

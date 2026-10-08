@@ -10,7 +10,7 @@
 
 	type Line = {
 		rawName: string;
-		kind: 'item' | 'pfand';
+		kind: 'item' | 'pfand' | 'discount' | 'fee';
 		qty: number;
 		unit: 'pc' | 'kg' | 'l' | null;
 		price: string;

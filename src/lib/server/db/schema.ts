@@ -135,6 +135,7 @@ export const pantryStatus = sqliteTable('pantry_status', {
 });
 
 export const RECEIPT_STATUSES = ['pending', 'parsed', 'failed', 'confirmed'] as const;
+export const RECEIPT_PARSERS = ['rewe-ebon', 'rewe-online', 'vision'] as const;
 
 export const receipts = sqliteTable('receipts', {
 	id: id(),
@@ -145,6 +146,7 @@ export const receipts = sqliteTable('receipts', {
 	status: text('status', { enum: RECEIPT_STATUSES }).notNull().default('pending'),
 	rawOutput: text('raw_output'),
 	parsed: text('parsed', { mode: 'json' }),
+	parser: text('parser', { enum: RECEIPT_PARSERS }),
 	error: text('error'),
 	createdAt: createdAt()
 });
@@ -166,7 +168,7 @@ export const purchases = sqliteTable(
 	(t) => [index('purchases_household_date').on(t.householdId, t.purchasedAt)]
 );
 
-export const LINE_KINDS = ['item', 'pfand'] as const;
+export const LINE_KINDS = ['item', 'pfand', 'discount', 'fee'] as const;
 
 export const purchaseLines = sqliteTable(
 	'purchase_lines',
