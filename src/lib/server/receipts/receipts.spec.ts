@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { parseReweLines, pdfToLines, reweEbonParser, NotAReweEbon } from './rewe';
 import { parseReweOnlineLines, reweOnlineParser } from './rewe-online';
 import { toReviewLines, totalsMismatch } from './postprocess';
@@ -12,7 +12,12 @@ import { createProduct } from '../catalog';
 import { getStatus } from '../pantry';
 import { testHousehold } from '../test/db';
 import { textPdf } from '../test/pdf';
-import { UnrecognizedReceipt, type ParsedReceipt, type ReceiptParser } from './types';
+import {
+	UnrecognizedReceipt,
+	type ParsedReceipt,
+	type ParserId,
+	type ReceiptParser
+} from './types';
 
 const readFixture = (name: string) =>
 	fs.readFileSync(path.join(import.meta.dirname, 'fixtures', name), 'utf8').split('\n');
@@ -214,9 +219,23 @@ describe('import flow', () => {
 			}
 		]
 	};
-	const fake = (r: ParsedReceipt): ReceiptParser => ({
+	const fake = (r: ParsedReceipt, id: ParserId = 'rewe-ebon'): ReceiptParser => ({
+		id,
 		parse: async () => ({ result: r, raw: '' })
 	});
+	const rejecting = (id: ParserId, calls: string[] = []): ReceiptParser => ({
+		id,
+		parse: async () => {
+			calls.push(id);
+			throw new UnrecognizedReceipt(`not ${id}`);
+		}
+	});
+	const receiptRow = (db: Awaited<ReturnType<typeof testHousehold>>['db'], id: number) =>
+		db
+			.select()
+			.from(receipts)
+			.all()
+			.find((x) => x.id === id)!;
 
 	async function parsedReceipt(
 		db: Awaited<ReturnType<typeof testHousehold>>['db'],
@@ -229,23 +248,43 @@ describe('import flow', () => {
 		return r.id;
 	}
 
-	it('uses the eBon parser for PDFs and the LLM for photos', async () => {
+	it('tries PDF parsers in order and records the one that matched', async () => {
 		const { db, hh } = await testHousehold();
 		const calls: string[] = [];
+		const record = (p: ReceiptParser): ReceiptParser => ({
+			id: p.id,
+			parse: async (files) => (calls.push(p.id), p.parse(files))
+		});
 		const parsers = {
-			ebon: { parse: async () => (calls.push('ebon'), { result: parsed, raw: '' }) },
-			vision: { parse: async () => (calls.push('vision'), { result: parsed, raw: '' }) }
+			pdf: [rejecting('rewe-ebon', calls), record(fake(parsed, 'rewe-online'))],
+			vision: record(fake(parsed, 'vision'))
 		};
-		await parsedReceipt(db, hh, 'pdf', parsers);
-		await parsedReceipt(db, hh, 'photo', parsers);
-		expect(calls).toEqual(['ebon', 'vision']);
+		const pdf = await parsedReceipt(db, hh, 'pdf', parsers);
+		const photo = await parsedReceipt(db, hh, 'photo', parsers);
+		expect(calls).toEqual(['rewe-ebon', 'rewe-online', 'vision']);
+		expect(receiptRow(db, pdf).parser).toBe('rewe-online');
+		expect(receiptRow(db, photo).parser).toBe('vision');
+	});
+
+	it('logs why each PDF parser rejected before falling back to the LLM', async () => {
+		const { db, hh } = await testHousehold();
+		const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		const id = await parsedReceipt(db, hh, 'pdf', {
+			pdf: [rejecting('rewe-ebon'), rejecting('rewe-online')],
+			vision: fake(parsed, 'vision')
+		});
+		expect(warn).toHaveBeenCalledWith(
+			`receipt ${id}: no PDF parser matched (rewe-ebon: not rewe-ebon; rewe-online: not rewe-online)`
+		);
+		warn.mockRestore();
+		expect(receiptRow(db, id)).toMatchObject({ status: 'parsed', parser: 'vision' });
 	});
 
 	it('learns aliases, restocks pantry, and warns on duplicates', async () => {
 		const { db, admin, hh } = await testHousehold();
 		const milch = createProduct(db, hh, { name: 'Milch' });
 
-		const first = await parsedReceipt(db, hh, 'pdf', { ebon: fake(parsed), vision: null });
+		const first = await parsedReceipt(db, hh, 'pdf', { pdf: [fake(parsed)], vision: null });
 		const review = buildReview(db, hh, first)!;
 		expect(review.lines[0].match?.auto).toBe(false);
 		expect(review.lines[0].match?.productId).toBe(milch.id);
@@ -270,7 +309,7 @@ describe('import flow', () => {
 			new Date('2026-10-07T18:32').getTime()
 		);
 
-		const second = await parsedReceipt(db, hh, 'pdf', { ebon: fake(parsed), vision: null });
+		const second = await parsedReceipt(db, hh, 'pdf', { pdf: [fake(parsed)], vision: null });
 		const again = buildReview(db, hh, second)!;
 		expect(again.lines[0].match).toMatchObject({ productId: milch.id, auto: true });
 		expect(again.duplicate).toBe(true);
@@ -290,12 +329,7 @@ describe('import flow', () => {
 
 	it('fails cleanly without an API key for photos', async () => {
 		const { db, hh } = await testHousehold();
-		const id = await parsedReceipt(db, hh, 'photo', { ebon: fake(parsed), vision: null });
-		const r = db
-			.select()
-			.from(receipts)
-			.all()
-			.find((x) => x.id === id)!;
-		expect(r).toMatchObject({ status: 'failed', error: 'noApiKey' });
+		const id = await parsedReceipt(db, hh, 'photo', { pdf: [fake(parsed)], vision: null });
+		expect(receiptRow(db, id)).toMatchObject({ status: 'failed', error: 'noApiKey' });
 	});
 });

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { LINE_KINDS } from '../db/schema';
+import type { LINE_KINDS, RECEIPT_PARSERS } from '../db/schema';
 
 export const UNITS = ['pc', 'kg', 'l'] as const;
 export const RAW_LINE_KINDS = [
@@ -40,7 +40,10 @@ export type ReceiptFile = { path: string; mediaType: 'image/jpeg' | 'application
 /** The files are not in this parser's format; the next parser may try. */
 export class UnrecognizedReceipt extends Error {}
 
+export type ParserId = (typeof RECEIPT_PARSERS)[number];
+
 export interface ReceiptParser {
+	id: ParserId;
 	parse(files: ReceiptFile[]): Promise<{ result: ParsedReceipt; raw: string }>;
 }
 

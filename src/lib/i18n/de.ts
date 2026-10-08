@@ -101,7 +101,7 @@ export const de: Messages = {
 	'receipts.title': 'Kassenbons',
 	'receipts.upload': 'Bon importieren',
 	'receipts.photo': 'Foto aufnehmen',
-	'receipts.file': 'Datei wählen (Fotos oder eBon-PDF)',
+	'receipts.file': 'Datei wählen (Fotos oder PDF)',
 	'receipts.uploadSubmit': 'Hochladen',
 	'receipts.manual': 'Einkauf manuell erfassen',
 	'receipts.status.pending': 'Wird gelesen…',
@@ -127,6 +127,8 @@ export const de: Messages = {
 	'receipts.addLine': 'Zeile hinzufügen',
 	'receipts.saved': 'Einkauf gespeichert.',
 	'receipts.noApiKey': 'Foto-Erkennung nicht konfiguriert (ANTHROPIC_API_KEY).',
+	'receipts.readFromPdf': 'Aus dem PDF gelesen',
+	'receipts.readByAi': 'Von KI gelesen',
 
 	'purchases.title': 'Einkäufe',
 	'purchases.manualTitle': 'Manueller Einkauf',

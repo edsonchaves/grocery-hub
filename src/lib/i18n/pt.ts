@@ -99,7 +99,7 @@ export const pt = {
 	'receipts.title': 'Notas fiscais',
 	'receipts.upload': 'Importar nota',
 	'receipts.photo': 'Tirar foto',
-	'receipts.file': 'Escolher arquivo (fotos ou PDF eBon)',
+	'receipts.file': 'Escolher arquivo (fotos ou PDF)',
 	'receipts.uploadSubmit': 'Enviar',
 	'receipts.manual': 'Lançar compra manual',
 	'receipts.status.pending': 'Lendo…',
@@ -124,6 +124,8 @@ export const pt = {
 	'receipts.addLine': 'Adicionar linha',
 	'receipts.saved': 'Compra salva.',
 	'receipts.noApiKey': 'Leitura de fotos não configurada (ANTHROPIC_API_KEY).',
+	'receipts.readFromPdf': 'Lido do PDF',
+	'receipts.readByAi': 'Lido por IA',
 
 	'purchases.title': 'Compras',
 	'purchases.manualTitle': 'Compra manual',

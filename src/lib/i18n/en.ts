@@ -101,7 +101,7 @@ export const en: Messages = {
 	'receipts.title': 'Receipts',
 	'receipts.upload': 'Import receipt',
 	'receipts.photo': 'Take photo',
-	'receipts.file': 'Choose file (photos or eBon PDF)',
+	'receipts.file': 'Choose file (photos or PDF)',
 	'receipts.uploadSubmit': 'Upload',
 	'receipts.manual': 'Enter purchase manually',
 	'receipts.status.pending': 'Reading…',
@@ -126,6 +126,8 @@ export const en: Messages = {
 	'receipts.addLine': 'Add line',
 	'receipts.saved': 'Purchase saved.',
 	'receipts.noApiKey': 'Photo reading not configured (ANTHROPIC_API_KEY).',
+	'receipts.readFromPdf': 'Read from PDF',
+	'receipts.readByAi': 'Read by AI',
 
 	'purchases.title': 'Purchases',
 	'purchases.manualTitle': 'Manual purchase',

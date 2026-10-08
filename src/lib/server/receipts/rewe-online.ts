@@ -1,12 +1,5 @@
-import fs from 'node:fs/promises';
-import { cents, pdfToLines } from './rewe';
-import {
-	UnrecognizedReceipt,
-	type ParsedReceipt,
-	type RawLine,
-	type ReceiptFile,
-	type ReceiptParser
-} from './types';
+import { cents, pdfLinesParser } from './rewe';
+import { UnrecognizedReceipt, type ParsedReceipt, type RawLine } from './types';
 
 export const REWE_ONLINE_STORE = 'REWE online';
 
@@ -69,11 +62,4 @@ export function parseReweOnlineLines(rawLines: string[]): ParsedReceipt {
 	};
 }
 
-export const reweOnlineParser: ReceiptParser = {
-	async parse(files: ReceiptFile[]) {
-		const pdf = files.find((f) => f.mediaType === 'application/pdf');
-		if (!pdf) throw new UnrecognizedReceipt('no pdf');
-		const lines = await pdfToLines(new Uint8Array(await fs.readFile(pdf.path)));
-		return { result: parseReweOnlineLines(lines), raw: lines.join('\n') };
-	}
-};
+export const reweOnlineParser = pdfLinesParser('rewe-online', parseReweOnlineLines);

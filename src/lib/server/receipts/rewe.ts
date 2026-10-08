@@ -1,8 +1,15 @@
 import fs from 'node:fs/promises';
 import { extractTextItems } from 'unpdf';
-import type { ParsedReceipt, RawLine, ReceiptFile, ReceiptParser } from './types';
+import {
+	UnrecognizedReceipt,
+	type ParsedReceipt,
+	type ParserId,
+	type RawLine,
+	type ReceiptFile,
+	type ReceiptParser
+} from './types';
 
-export class NotAReweEbon extends Error {}
+export class NotAReweEbon extends UnrecognizedReceipt {}
 
 export const cents = (s: string) =>
 	Math.round(Number(s.replace(/\./g, '').replace(',', '.')) * 100);
@@ -99,11 +106,19 @@ export function parseReweLines(rawLines: string[]): ParsedReceipt {
 	return { store: 'REWE', purchasedAt, totalCents, lines: out };
 }
 
-export const reweEbonParser: ReceiptParser = {
-	async parse(files: ReceiptFile[]) {
-		const pdf = files.find((f) => f.mediaType === 'application/pdf');
-		if (!pdf) throw new NotAReweEbon('no pdf');
-		const lines = await pdfToLines(new Uint8Array(await fs.readFile(pdf.path)));
-		return { result: parseReweLines(lines), raw: lines.join('\n') };
-	}
-};
+export function pdfLinesParser(
+	id: ParserId,
+	parseLines: (lines: string[]) => ParsedReceipt
+): ReceiptParser {
+	return {
+		id,
+		async parse(files: ReceiptFile[]) {
+			const pdf = files.find((f) => f.mediaType === 'application/pdf');
+			if (!pdf) throw new UnrecognizedReceipt('no pdf');
+			const lines = await pdfToLines(new Uint8Array(await fs.readFile(pdf.path)));
+			return { result: parseLines(lines), raw: lines.join('\n') };
+		}
+	};
+}
+
+export const reweEbonParser = pdfLinesParser('rewe-ebon', parseReweLines);

@@ -130,6 +130,11 @@
 	{:else if data.receipt.status === 'confirmed'}
 		<p class="card">✓ {t('receipts.saved')}</p>
 	{/if}
+	{#if data.receipt.status === 'parsed' && data.receipt.parser}
+		<p class="muted">
+			{data.receipt.parser === 'vision' ? t('receipts.readByAi') : t('receipts.readFromPdf')}
+		</p>
+	{/if}
 
 	{#if data.receipt.files.length}
 		<details style="margin-bottom:0.75rem">

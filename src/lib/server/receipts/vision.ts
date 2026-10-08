@@ -48,6 +48,7 @@ export function createVisionParser(
 	model = config.anthropicModel
 ): ReceiptParser {
 	return {
+		id: 'vision',
 		async parse(files: ReceiptFile[]) {
 			const content: Anthropic.Beta.BetaContentBlockParam[] = [];
 			for (const f of files) {

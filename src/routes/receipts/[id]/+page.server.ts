@@ -19,7 +19,13 @@ export const load = ({ locals, params }: PageServerLoadEvent) => {
 	const receipt = getReceipt(db, user.householdId, id);
 	if (!receipt) error(404, 'not found');
 	return {
-		receipt: { id: receipt.id, status: receipt.status, error: receipt.error, files: receipt.files },
+		receipt: {
+			id: receipt.id,
+			status: receipt.status,
+			error: receipt.error,
+			files: receipt.files,
+			parser: receipt.parser
+		},
 		review: receipt.status === 'parsed' ? buildReview(db, user.householdId, id) : undefined,
 		products: listProducts(db, user.householdId).map((p) => ({ id: p.id, name: p.name })),
 		stores: listStores(db, user.householdId).map((s) => s.name),

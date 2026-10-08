@@ -11,11 +11,14 @@ import { findOrCreateProduct, listProducts } from '../catalog';
 import { markRestocked } from '../pantry';
 import { matchLine, saveAlias, type Match } from './matching';
 import { toReviewLines, totalsMismatch } from './postprocess';
-import { NotAReweEbon, reweEbonParser } from './rewe';
+import { reweEbonParser } from './rewe';
+import { reweOnlineParser } from './rewe-online';
 import { createVisionParser } from './vision';
 import {
 	UNITS,
+	UnrecognizedReceipt,
 	parsedReceiptSchema,
+	type ParserId,
 	type ReceiptFile,
 	type ReceiptParser,
 	type ReviewLine
@@ -104,10 +107,10 @@ export function receiptFiles(receiptId: number, names: string[]): ReceiptFile[] 
 
 // ---- parsing ----
 
-export type Parsers = { ebon: ReceiptParser; vision: ReceiptParser | null };
+export type Parsers = { pdf: ReceiptParser[]; vision: ReceiptParser | null };
 
 export const defaultParsers = (): Parsers => ({
-	ebon: reweEbonParser,
+	pdf: [reweEbonParser, reweOnlineParser],
 	vision: config.anthropicApiKey ? createVisionParser() : null
 });
 
@@ -119,26 +122,37 @@ export async function processReceipt(
 	const r = db.select().from(receipts).where(eq(receipts.id, receiptId)).get();
 	if (!r || r.status === 'confirmed') return;
 	db.update(receipts)
-		.set({ status: 'pending', error: null })
+		.set({ status: 'pending', error: null, parser: null })
 		.where(eq(receipts.id, receiptId))
 		.run();
 	const files = receiptFiles(r.id, r.files);
 	try {
 		let out: Awaited<ReturnType<ReceiptParser['parse']>> | undefined;
+		let parser: ParserId | undefined;
 		if (r.kind === 'pdf') {
-			try {
-				out = await parsers.ebon.parse(files);
-				if (!out.result.lines.length) out = undefined;
-			} catch (e) {
-				if (!(e instanceof NotAReweEbon)) console.warn('eBon parse failed, falling back', e);
+			const misses: string[] = [];
+			for (const p of parsers.pdf) {
+				try {
+					const res = await p.parse(files);
+					if (res.result.lines.length) {
+						[out, parser] = [res, p.id];
+						break;
+					}
+					misses.push(`${p.id}: no lines`);
+				} catch (e) {
+					if (!(e instanceof UnrecognizedReceipt)) console.error(`${p.id} parser crashed`, e);
+					misses.push(`${p.id}: ${e instanceof Error ? e.message : e}`);
+				}
 			}
+			if (!out) console.warn(`receipt ${r.id}: no PDF parser matched (${misses.join('; ')})`);
 		}
 		if (!out) {
 			if (!parsers.vision) throw new Error('noApiKey');
 			out = await parsers.vision.parse(files);
+			parser = parsers.vision.id;
 		}
 		db.update(receipts)
-			.set({ status: 'parsed', parsed: out.result, rawOutput: out.raw })
+			.set({ status: 'parsed', parsed: out.result, rawOutput: out.raw, parser })
 			.where(eq(receipts.id, receiptId))
 			.run();
 	} catch (e) {
