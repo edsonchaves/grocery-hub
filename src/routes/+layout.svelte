@@ -9,6 +9,7 @@
 
 	const nav = [
 		{ href: '/', key: 'nav.list', icon: '☑' },
+		{ href: '/week', key: 'nav.week', icon: '▦' },
 		{ href: '/pantry', key: 'nav.pantry', icon: '▤' },
 		{ href: '/receipts', key: 'nav.receipts', icon: '⎙' },
 		{ href: '/insights', key: 'nav.insights', icon: '€' },
