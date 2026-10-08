@@ -74,7 +74,7 @@ export function monthlyOverview(db: Db, householdId: number, year: number, month
 	for (const l of lines) {
 		const c = l.cents + l.discount;
 		linesPerPurchase.set(l.purchaseId, (linesPerPurchase.get(l.purchaseId) ?? 0) + c);
-		if (l.kind === 'pfand') add('pfand', null, c);
+		if (l.kind !== 'item') add(l.kind, null, c);
 		else if (l.categoryId) add(`c${l.categoryId}`, l.category, c);
 		else add('uncategorized', null, c);
 	}

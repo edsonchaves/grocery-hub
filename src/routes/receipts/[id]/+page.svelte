@@ -41,6 +41,12 @@
 			}))
 		};
 	};
+	const KIND_LABEL = {
+		pfand: 'receipts.pfand',
+		discount: 'receipts.discount',
+		fee: 'receipts.fee'
+	} as const;
+
 	let draft = $state(init());
 	let showAll = $state(false);
 
@@ -206,7 +212,7 @@
 						<div class="grow">
 							<div class="row">
 								<input class="raw" bind:value={l.rawName} aria-label={t('receipts.rawName')} />
-								{#if l.kind === 'pfand'}<span class="chip">{t('receipts.pfand')}</span>{/if}
+								{#if l.kind !== 'item'}<span class="chip">{t(KIND_LABEL[l.kind])}</span>{/if}
 								<button
 									class="ghost danger"
 									aria-label={t('common.delete')}

@@ -15,7 +15,10 @@
 	const categories = $derived(
 		o.byCategory.map((c) => ({
 			...c,
-			label: c.key === 'pfand' ? t('insights.pfand') : (c.label ?? t('common.uncategorized'))
+			label:
+				c.key === 'pfand' || c.key === 'discount' || c.key === 'fee'
+					? t(`insights.${c.key}`)
+					: (c.label ?? t('common.uncategorized'))
 		}))
 	);
 	const storeRows = $derived(o.byStore.map((s) => ({ ...s, label: s.label ?? '' })));

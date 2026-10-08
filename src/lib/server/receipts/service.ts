@@ -5,7 +5,7 @@ import sharp from 'sharp';
 import { and, desc, eq, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import type { Db } from '../db';
-import { purchaseLines, purchases, receipts, stores } from '../db/schema';
+import { LINE_KINDS, purchaseLines, purchases, receipts, stores } from '../db/schema';
 import { config } from '../config';
 import { findOrCreateProduct, listProducts } from '../catalog';
 import { markRestocked } from '../pantry';
@@ -267,7 +267,7 @@ export const purchaseInputSchema = z.object({
 				unit: z.enum(UNITS).nullable().default(null),
 				lineCents: z.number().int(),
 				discountCents: z.number().int().max(0).default(0),
-				kind: z.enum(['item', 'pfand']).default('item')
+				kind: z.enum(LINE_KINDS).default('item')
 			})
 		)
 		.default([])

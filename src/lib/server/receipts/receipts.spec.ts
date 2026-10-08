@@ -128,6 +128,28 @@ describe('post-processing', () => {
 		expect(pfand.map((l) => l.lineCents)).toEqual([25, -75]);
 	});
 
+	it('keeps order discounts, fees and delivery bags as separate lines', () => {
+		const lines = toReviewLines(
+			parseReweOnlineLines(
+				online.map((l) =>
+					l.startsWith('Liefergebühr')
+						? 'Liefergebühr  1  A/B  3,90 €  3,90 €'
+						: l.startsWith('Gesamtsumme')
+							? 'Gesamtsumme  33,77 €'
+							: l
+				)
+			)
+		);
+		expect(lines.every((l) => l.discountCents === 0)).toBe(true);
+		expect(lines.find((l) => l.kind === 'discount')).toMatchObject({
+			rawName: 'Summe Rabatt Gesamtpositionen**',
+			lineCents: -600
+		});
+		expect(lines.find((l) => l.kind === 'fee')).toMatchObject({ lineCents: 390 });
+		expect(lines.filter((l) => l.kind === 'pfand').map((l) => l.lineCents)).toEqual([200, -100]);
+		expect(totalsMismatch(lines, 3377)).toBeUndefined();
+	});
+
 	it('warns on totals mismatch above 0.05 EUR', () => {
 		const lines = toReviewLines(parseReweLines(fixture));
 		expect(totalsMismatch(lines, 1208)).toBeUndefined();

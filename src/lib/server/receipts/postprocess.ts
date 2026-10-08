@@ -1,8 +1,19 @@
-import type { ParsedReceipt, ReviewLine } from './types';
+import type { ParsedReceipt, RawLine, ReviewLine } from './types';
 
 export const MISMATCH_TOLERANCE_CENTS = 5;
 
-/** Discounts go onto the preceding item; Pfand and Pfand returns stay separate lines. */
+const REVIEW_KIND: Record<Exclude<RawLine['kind'], 'discount'>, ReviewLine['kind']> = {
+	item: 'item',
+	pfand: 'pfand',
+	pfand_return: 'pfand',
+	order_discount: 'discount',
+	fee: 'fee'
+};
+
+/**
+ * Item discounts go onto the preceding item so its price stays comparable; order discounts,
+ * fees, Pfand and Pfand returns stay separate lines.
+ */
 export function toReviewLines(parsed: ParsedReceipt): ReviewLine[] {
 	const out: ReviewLine[] = [];
 	let lastItem: ReviewLine | undefined;
@@ -18,7 +29,7 @@ export function toReviewLines(parsed: ParsedReceipt): ReviewLine[] {
 					unit: null,
 					lineCents: cents,
 					discountCents: 0,
-					kind: 'item'
+					kind: 'discount'
 				});
 			continue;
 		}
@@ -27,9 +38,12 @@ export function toReviewLines(parsed: ParsedReceipt): ReviewLine[] {
 			suggestedName: l.suggestedName,
 			qty: l.qty,
 			unit: l.unit,
-			lineCents: l.kind === 'pfand_return' ? -Math.abs(l.lineCents) : l.lineCents,
+			lineCents:
+				l.kind === 'pfand_return' || l.kind === 'order_discount'
+					? -Math.abs(l.lineCents)
+					: l.lineCents,
 			discountCents: 0,
-			kind: l.kind === 'item' ? 'item' : 'pfand'
+			kind: REVIEW_KIND[l.kind]
 		};
 		out.push(line);
 		if (line.kind === 'item') lastItem = line;

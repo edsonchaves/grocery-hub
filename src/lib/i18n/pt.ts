@@ -121,6 +121,7 @@ export const pt = {
 	'receipts.skip': '— ignorar —',
 	'receipts.discount': 'Desconto',
 	'receipts.pfand': 'Pfand',
+	'receipts.fee': 'Taxa',
 	'receipts.addLine': 'Adicionar linha',
 	'receipts.saved': 'Compra salva.',
 	'receipts.noApiKey': 'Leitura de fotos não configurada (ANTHROPIC_API_KEY).',
@@ -139,6 +140,8 @@ export const pt = {
 	'insights.byCategory': 'Por categoria',
 	'insights.byStore': 'Por mercado',
 	'insights.pfand': 'Pfand',
+	'insights.discount': 'Descontos',
+	'insights.fee': 'Taxas',
 	'insights.noData': 'Sem compras neste mês.',
 	'insights.prices': 'Preços por produto',
 

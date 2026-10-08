@@ -123,6 +123,7 @@ export const en: Messages = {
 	'receipts.skip': '— skip —',
 	'receipts.discount': 'Discount',
 	'receipts.pfand': 'Deposit',
+	'receipts.fee': 'Fee',
 	'receipts.addLine': 'Add line',
 	'receipts.saved': 'Purchase saved.',
 	'receipts.noApiKey': 'Photo reading not configured (ANTHROPIC_API_KEY).',
@@ -141,6 +142,8 @@ export const en: Messages = {
 	'insights.byCategory': 'By category',
 	'insights.byStore': 'By store',
 	'insights.pfand': 'Deposit',
+	'insights.discount': 'Discounts',
+	'insights.fee': 'Fees',
 	'insights.noData': 'No purchases this month.',
 	'insights.prices': 'Prices per product',
 

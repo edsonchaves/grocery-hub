@@ -19,7 +19,7 @@ describe('spending-insights', () => {
 				rawName: string;
 				productId?: number;
 				lineCents: number;
-				kind?: 'item' | 'pfand';
+				kind?: 'item' | 'pfand' | 'discount' | 'fee';
 			}[]
 		) => savePurchase(db, hh, admin.id, { store, purchasedAt: date, totalCents: total, lines });
 
@@ -42,6 +42,27 @@ describe('spending-insights', () => {
 		]);
 		const cat = Object.fromEntries(o.byCategory.map((c) => [c.key, c.cents]));
 		expect(cat).toEqual({ uncategorized: 1400, [`c${dairy.id}`]: 249, pfand: 25 });
+	});
+
+	it('shows order discounts and fees as their own buckets', async () => {
+		const { db, admin, hh } = await testHousehold();
+		const dairy = listCategories(db, hh)[2];
+		const butter = createProduct(db, hh, { name: 'Butter' });
+		updateProduct(db, hh, butter.id, { categoryId: dairy.id });
+		savePurchase(db, hh, admin.id, {
+			store: 'REWE online',
+			purchasedAt: '2026-10-07T00:00',
+			totalCents: 2490,
+			lines: [
+				{ rawName: 'Butter', productId: butter.id, lineCents: 2700 },
+				{ rawName: 'Summe Rabatt Gesamtpositionen**', lineCents: -600, kind: 'discount' },
+				{ rawName: 'Liefergebühr', lineCents: 390, kind: 'fee' }
+			]
+		});
+		const cat = Object.fromEntries(
+			monthlyOverview(db, hh, 2026, 10).byCategory.map((c) => [c.key, c.cents])
+		);
+		expect(cat).toEqual({ [`c${dairy.id}`]: 2700, discount: -600, fee: 390 });
 	});
 
 	it('price history and cheapest store', async () => {

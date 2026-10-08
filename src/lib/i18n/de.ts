@@ -124,6 +124,7 @@ export const de: Messages = {
 	'receipts.skip': '— ignorieren —',
 	'receipts.discount': 'Rabatt',
 	'receipts.pfand': 'Pfand',
+	'receipts.fee': 'Gebühr',
 	'receipts.addLine': 'Zeile hinzufügen',
 	'receipts.saved': 'Einkauf gespeichert.',
 	'receipts.noApiKey': 'Foto-Erkennung nicht konfiguriert (ANTHROPIC_API_KEY).',
@@ -142,6 +143,8 @@ export const de: Messages = {
 	'insights.byCategory': 'Nach Kategorie',
 	'insights.byStore': 'Nach Markt',
 	'insights.pfand': 'Pfand',
+	'insights.discount': 'Rabatte',
+	'insights.fee': 'Gebühren',
 	'insights.noData': 'Keine Einkäufe in diesem Monat.',
 	'insights.prices': 'Preise pro Produkt',
 
