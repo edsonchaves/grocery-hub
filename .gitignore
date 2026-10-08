@@ -27,3 +27,6 @@ test-results
 # App data
 /data
 playwright-report
+
+# OpenSpec lives on the spec-history branch, checked out here as a worktree
+openspec/
