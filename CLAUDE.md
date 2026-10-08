@@ -4,7 +4,7 @@ Self-hosted household grocery app: shared shopping list, pantry status, receipt 
 
 ## Workflow
 
-Spec-driven via OpenSpec. Current change: `openspec/changes/bootstrap-grocery-hub/` (proposal, design, specs, tasks). Read `design.md` before coding; implement with `/opsx:apply`, tick tasks in `tasks.md` as they land.
+Spec-driven via OpenSpec (`openspec/`). Read the active change's `design.md` before coding; implement with `/opsx:apply`, tick tasks in `tasks.md` as they land.
 
 ## Stack
 
